@@ -92,6 +92,7 @@ class Lock(object):
             if self.safe:
                 raise LockError("Unsafe exit, pid file not found")
         try:
+            os.chmod(self.pid_file, 0o0777)
             os.unlink(self.pid_file)
         except OSError:
             print("Could not delete pid file, was already removed!")
@@ -179,7 +180,7 @@ class JSONModification(object):
         else:
             if file_data['version'] != __version__:
                 file_data = self._upgrade_path(file_data)
-            self.data = file_data
+            self.data = file_data['data']
 
 
     def _upgrade_path(self, data):
