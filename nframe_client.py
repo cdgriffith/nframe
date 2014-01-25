@@ -57,18 +57,26 @@ class Client():
             incoming += self.socket.recv(1024).decode('utf-8')
         return loads(incoming)
 
-    def message(self, data):
-        """
-        A example function that shows how to send data to the server and receive data back.
-        """
+    def _communicate(self, command, data=None):
         try:
             self._connect()
         except socket.error:
             print "could not connect"
         else:
-            print self._send(data)
+            received = self._send(dict(command=command, data=data))
         finally:
             self._close()
+        return received
+
+    def message(self, data):
+        """
+        A example function that shows how to send data to the server and receive data back.
+        """
+        return self._communicate("add data", data)
+
+    def get_data(self):
+        return self._communicate("get data")
+
 
 if __name__ == '__main__':
     sys.stderr.write("\nYou can't run me!\n\n\

@@ -10,7 +10,6 @@ from time import sleep
 import json
 from math import ceil
 import os
-import shutil
 import signal
 import tempfile
 import sys
@@ -158,8 +157,8 @@ class JSONModification(object):
         """ Save data to local json file so it is persistent."""
         file_data = dict(data=self.data, version=__version__)
         try:
-            with open(self.data_file, "wb") as data_file:
-                json.dump(file_data, data_file)
+            with open(self.data_file, "w") as data_file:
+                data_file.write(_bytes(json.dumps(file_data)))
         except (ValueError, IOError):
             raise ServerError("Data could not be saved")
 
@@ -168,19 +167,13 @@ class JSONModification(object):
 
         if not os.path.exists(self.data_file):
             return
-        try:
-                with open(self.data_file, "rb") as file_data:
-                    file_data = json.load(file_data)
 
-        except (ValueError, KeyError):
-            shutil.move(self.data_file,
-                        "{0}{1}.backup".format(self.data_file,
-                                               datetime.now().isoformat()))
-            raise ServerError("Data could not be loaded")
-        else:
-            if file_data['version'] != __version__:
-                file_data = self._upgrade_path(file_data)
-            self.data = file_data['data']
+        with open(self.data_file, "r") as file_data:
+            file_data = json.loads(file_data.read())
+
+        if file_data['version'] != __version__:
+            file_data = self._upgrade_path(file_data)
+        self.data = file_data['data']
 
 
     def _upgrade_path(self, data):
@@ -254,11 +247,18 @@ class Server(BaseRequestHandler, JSONModification):
         Overloaded handle function to communicate with client.
         """
         # Read data in
-        self.data = self._read()
+        incoming = self._read()
+        command = incoming['command']
+        data = incoming['data']
         # do something
+        if command == "get data":
+            # Return all current data
+            return self._send(self.data)
+        else:
+            # update data dict and return incoming as in
+            self.data.update(data)
+            return self._send(incoming)
 
-        # return response, currently just data in
-        self._send(self.data)
 
 
 class Data(JSONModification):
@@ -274,8 +274,8 @@ class Data(JSONModification):
         """
         file_data = {"version": __version__, "data": self.data}
 
-        with open(filename, "wb") as data_file:
-            json.dump(file_data, data_file, indent=2)
+        with open(filename, "w") as data_file:
+            data_file.write(_bytes(json.dumps(file_data, indent=2)))
 
     @autosave
     def import_data(self, filename="export.json"):
@@ -283,8 +283,8 @@ class Data(JSONModification):
         import_data(filename)
         Add all data in the given file to the data set.
         """
-        with open(filename, "rb") as data_file:
-            file_data = json.load(data_file)
+        with open(filename, "r") as data_file:
+            file_data = json.loads(data_file.read())
         self.data.update(file_data['data'])
 
     @autosave
