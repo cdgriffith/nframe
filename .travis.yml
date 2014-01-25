@@ -9,4 +9,4 @@ install:
 script:
     nosetests --with-coverage -vv --cover-package=nframe_client,nframe_server
 after_success:
-    coveralls
+    coveralls debug

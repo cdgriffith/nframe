@@ -337,7 +337,6 @@ def main(*args):
                         help="perform action then exit (don't run server)",
                         dest="exit")
 
-
     pargs = parser.parse_args(args) if args else parser.parse_args()
 
     if pargs.force_unlock:
