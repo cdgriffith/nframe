@@ -18,8 +18,8 @@ if sys.version_info > (3,):
 else:
     _bytes = lambda x: str(x).encode('utf-8')
 
-class Client():
 
+class Client():
     def __init__(self, server="localhost", port=7645, **kwargs):
         self.server = server
         self.port = port
@@ -58,6 +58,9 @@ class Client():
         return loads(incoming)
 
     def message(self, data):
+        """
+        A example function that shows how to send data to the server and receive data back.
+        """
         try:
             self._connect()
         except socket.error:

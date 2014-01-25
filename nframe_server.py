@@ -22,9 +22,9 @@ if sys.version_info > (3,):
     _bytes = partial(bytes, encoding='utf-8')
     unicode = str
 else:
+    # Python 2.x compatibility
     from SocketServer import BaseRequestHandler, TCPServer
     _bytes = lambda x: str(x).encode('utf-8')
-    class FileNotFoundError(IOError): pass
 
 
 class LockError(Exception): pass
@@ -49,6 +49,9 @@ class Lock(object):
         assert isinstance(self.timeout, int) and self.timeout >= 0
 
     def __enter__(self):
+        """
+        Start the lock as a context manager, protecting a file from modification.
+        """
         while self.timeout >= 0:
             try:
                 self.acquire()
@@ -62,9 +65,15 @@ class Lock(object):
             signal.signal(signal.SIGTERM, self.__exit__)
 
     def __exit__(self, exctype, value, tb):
+        """
+        On release of a context manager release the lock
+        """
         self.release()
 
     def acquire(self):
+        """
+        If the file is not currently in use set the lock
+        """
         if os.path.exists(self.pid_file):
             self.check_lock()
         else:
@@ -73,9 +82,12 @@ class Lock(object):
             os.chmod(self.pid_file, 0o0444)
 
     def release(self):
+        """
+        Safely release the lock file
+        """
         try:
             self.check_lock(release=True)
-        except (FileNotFoundError, IOError):
+        except (OSError, IOError):
             print("Pid file has been removed!")
             if self.safe:
                 raise LockError("Unsafe exit, pid file not found")
@@ -87,6 +99,9 @@ class Lock(object):
                 raise LockError("Unsafe exit, pid file not found")
 
     def check_lock(self, release=False):
+        """
+        Determine if lock is currently in use
+        """
         with open(self.pid_file, "r") as pid_data:
             pid = pid_data.readline().encode('utf-8').rstrip()
         try:
@@ -100,6 +115,9 @@ by process {}".format(str(pid)))
             raise LockError("Already obtained lock, safe mode prohibited")
 
     def force_release(self):
+        """
+        Forcefully remove the lock file
+        """
         try:
             os.unlink(self.pid_file)
         except OSError:
@@ -107,6 +125,7 @@ by process {}".format(str(pid)))
             
 
 class JSONModification(object):
+    """Class for reusable use of saving and loading data from JSON files"""
 
     def __init__(self, data_file=DATA_FILE, pid_file=LOCK_FILE, timeout=0):
         self.data = {}
@@ -116,6 +135,10 @@ class JSONModification(object):
         self.timeout = timeout
 
     def __enter__(self):
+        """
+        Use the JSON modification as a context manager to automatically lock
+        the file and load the data (creating it if it does not yet exist)
+        """
         self.lock = Lock(self.lock_file, timeout=self.timeout)
         self.lock.acquire()
         self._load()
@@ -123,6 +146,11 @@ class JSONModification(object):
         return self
 
     def __exit__(self, exctype, value, tb):
+        """
+        Save the data and close exclusive access to the file
+        """
+        self._load()
+        self._save()
         self.lock.release()
 
     def _save(self):
@@ -260,17 +288,24 @@ class Data(JSONModification):
 
     @autosave
     def add_data(self, **kwargs):
+        """
+        add_data()
+        Update the current data dictionary with new information provided
+        """
         self.data.update(kwargs)
 
     @autosave
     def remove_data(self, *args):
+        """
+        remove_data()
+        Removes the key:value pair based on the provided key(s) in a list
+        """
         for arg in args:
             del self.data[arg]
 
 
 def main(*args):
     """ Function invoked when the server is run as a script"""
-    global DATA_FILE
     import argparse
 
     desc = "nframe server"
