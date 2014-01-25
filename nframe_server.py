@@ -158,7 +158,7 @@ class JSONModification(object):
         file_data = dict(data=self.data, version=__version__)
         try:
             with open(self.data_file, "w") as data_file:
-                data_file.write(_bytes(json.dumps(file_data)))
+                data_file.write(str(json.dumps(file_data)))
         except (ValueError, IOError):
             raise ServerError("Data could not be saved")
 
@@ -275,7 +275,7 @@ class Data(JSONModification):
         file_data = {"version": __version__, "data": self.data}
 
         with open(filename, "w") as data_file:
-            data_file.write(_bytes(json.dumps(file_data, indent=2)))
+            data_file.write(str(json.dumps(file_data, indent=2)))
 
     @autosave
     def import_data(self, filename="export.json"):

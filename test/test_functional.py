@@ -53,7 +53,7 @@ class Interaction(TestCase):
     @staticmethod
     def test_message(i=0):
         conn = Client(port=server_port)
-        example_data = dict(new_test_data="Example data {}".format(i))
+        example_data = dict(new_test_data="Example data {0}".format(i))
         msg = conn.message(example_data)
         assert "command" in msg
         assert example_data == msg['data']

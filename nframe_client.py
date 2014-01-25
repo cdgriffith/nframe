@@ -61,7 +61,7 @@ class Client():
         try:
             self._connect()
         except socket.error:
-            print "could not connect"
+            print("Error while communicating")
         else:
             received = self._send(dict(command=command, data=data))
         finally:
