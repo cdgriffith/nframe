@@ -12,17 +12,15 @@ from math import ceil
 import sys
 from functools import partial
 
-if sys.version_info > (3,):
-    _bytes = partial(bytes, encoding='utf-8')
-    unicode = str
-else:
-    _bytes = lambda x: str(x).encode('utf-8')
+_bytes = partial(bytes, encoding='utf-8') if sys.version_info > (3,) else \
+    lambda x: str(x).encode('utf-8')
 
 
 class Client():
     def __init__(self, server="localhost", port=7645, **kwargs):
         self.server = server
         self.port = port
+        self.socket = None
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -61,7 +59,7 @@ class Client():
         try:
             self._connect()
         except socket.error:
-            print("Error while communicating")
+            received = "Error while communicating"
         else:
             received = self._send(dict(command=command, data=data))
         finally:
@@ -79,6 +77,4 @@ class Client():
 
 
 if __name__ == '__main__':
-    sys.stderr.write("\nYou can't run me!\n\n\
-Open a python interpreter and type in:\n\
-from nframe_client import Client\n\n")
+    print("\nYou can't run me!\n\n\ Read the README file")

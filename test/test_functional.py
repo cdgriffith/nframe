@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 from unittest import TestCase
 import os
-from nframe_server import TCPServer, Server, Data, Lock, DATA_FILE
+from nframe_server import TCPServer, Server, Data, Lock, DATA_FILE, main
 from nframe_client import Client
 from threading import Thread
 from multiprocessing.pool import ThreadPool
@@ -77,3 +77,8 @@ class Interaction(TestCase):
     def test_simultaneous_connections(self):
         pool = ThreadPool(10)
         pool.map(self.test_message, range(max_runs, max_runs*2))
+
+    def test_main(self):
+        pargs = main('--exit')
+        assert pargs.ip == '0.0.0.0'
+        assert pargs.port == 7645

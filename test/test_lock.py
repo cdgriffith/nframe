@@ -33,5 +33,16 @@ class TestLock(TestCase):
         a = Lock(pid_file=lock_file, safe=True)
         self.assertRaises(LockError, a.acquire)
 
+    def test_force_release(self):
+        with Lock(pid_file=lock_file, safe=True, cleanup_on_term=True):
+            a = Lock(pid_file=lock_file, safe=True)
+            a.force_release()
+            a.acquire()
 
-
+    def test_timeout(self):
+        with Lock(pid_file=lock_file, safe=True, cleanup_on_term=True):
+            try:
+                with Lock(pid_file=lock_file, safe=True, timeout=2):
+                    assert False, "Lock should not work"
+            except LockError:
+                assert True

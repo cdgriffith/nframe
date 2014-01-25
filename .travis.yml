@@ -5,8 +5,7 @@ python:
     - "3.2"
     - "3.3"
 install:
-    - pip install -r requirements.txt
-    - pip install coveralls
+    - pip install coveralls coverage nose
 script:
     nosetests --with-coverage -vv --cover-package=nframe_client,nframe_server
 after_success:

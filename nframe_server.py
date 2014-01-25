@@ -5,7 +5,6 @@ Copyright (c) 2014 Chris Griffith - MIT License
 """
 __version__ = '0.8-alpha'
 
-from datetime import datetime
 from time import sleep
 import json
 from math import ceil
@@ -16,23 +15,28 @@ import sys
 from functools import partial, wraps
 from distutils.version import LooseVersion
 
-if sys.version_info > (3,):
+try:
     from socketserver import BaseRequestHandler, TCPServer
-    _bytes = partial(bytes, encoding='utf-8')
-    unicode = str
-else:
-    # Python 2.x compatibility
+except ImportError:
     from SocketServer import BaseRequestHandler, TCPServer
-    _bytes = lambda x: str(x).encode('utf-8')
 
 
-class LockError(Exception): pass
-class ServerError(Exception): pass
+class LockError(Exception):
+    """ Custom error class for errors occurring within the Lock class """
+    pass
 
+
+class ServerError(Exception):
+    """ Custom error class for errors occurring within the Server class """
+    pass
+
+_bytes = partial(bytes, encoding='utf-8') if sys.version_info > (3,) else \
+    lambda x: str(x).encode('utf-8')
 
 LOCK_FILE = os.path.join(tempfile.gettempdir(), "nframe.pid")
 DATA_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                          "data.json")
+
 
 class Lock(object):
     """
@@ -51,18 +55,11 @@ class Lock(object):
         """
         Start the lock as a context manager, protecting a file from modification.
         """
-        while self.timeout >= 0:
-            try:
-                self.acquire()
-                break
-            except LockError:
-                self.timeout -= 1
-                sleep(1)
-        else:
-            raise LockError()
+        self.acquire()
         if self.cleanup:
             signal.signal(signal.SIGTERM, self.__exit__)
 
+    #noinspection PyUnusedLocal
     def __exit__(self, exctype, value, tb):
         """
         On release of a context manager release the lock
@@ -73,12 +70,20 @@ class Lock(object):
         """
         If the file is not currently in use set the lock
         """
-        if os.path.exists(self.pid_file):
-            self.check_lock()
+        while self.timeout >= 0:
+            try:
+                if os.path.exists(self.pid_file):
+                    self.check_lock()
+                else:
+                    with open(self.pid_file, "wb") as pid_data:
+                        pid_data.write(_bytes(str("{0}\n".format(self.pid))))
+                    os.chmod(self.pid_file, 0o0444)
+                break
+            except LockError:
+                self.timeout -= 1
+                sleep(1)
         else:
-            with open(self.pid_file, "wb") as pid_data:
-                pid_data.write(_bytes(str("{0}\n".format(self.pid))))
-            os.chmod(self.pid_file, 0o0444)
+            raise LockError()
 
     def release(self):
         """
@@ -110,7 +115,7 @@ class Lock(object):
             raise LockError("File is improperly formatted, cannot read")
         if int(pid) != self.pid:
             raise LockError("JSON files locked \
-by process {}".format(str(pid)))
+by process {0}".format(str(pid)))
         elif int(pid) == self.pid and self.safe and not release:
             raise LockError("Already obtained lock, safe mode prohibited")
 
@@ -118,10 +123,14 @@ by process {}".format(str(pid)))
         """
         Forcefully remove the lock file
         """
+        self.safe = False
         try:
+            os.chmod(self.pid_file, 0o0777)
             os.unlink(self.pid_file)
+            return True
         except OSError:
             print("Could not remove pid file")
+        return False
             
 
 class JSONModification(object):
@@ -145,6 +154,7 @@ class JSONModification(object):
         self._save()
         return self
 
+    #noinspection PyUnusedLocal
     def __exit__(self, exctype, value, tb):
         """
         Save the data and close exclusive access to the file
@@ -175,8 +185,8 @@ class JSONModification(object):
             file_data = self._upgrade_path(file_data)
         self.data = file_data['data']
 
-
-    def _upgrade_path(self, data):
+    @staticmethod
+    def _upgrade_path(data):
         """ Function in place for later use, when JSON objects may change and
         have to undergo a change from previous versions.
         """
@@ -184,6 +194,7 @@ class JSONModification(object):
             # update data
             pass
         return data
+
 
 def autosave(func):
     """ This decorator will take in class objects and invoke their load
@@ -213,7 +224,6 @@ class Server(BaseRequestHandler, JSONModification):
         self._load()
         self._save()
         super(Server, self).__init__(request, client_address, tcpserver)
-
 
     def _read(self):
         """ Retrieve incoming information from the socket. This will
@@ -258,7 +268,6 @@ class Server(BaseRequestHandler, JSONModification):
             # update data dict and return incoming as in
             self.data.update(data)
             return self._send(incoming)
-
 
 
 class Data(JSONModification):
@@ -324,9 +333,12 @@ def main(*args):
     parser.add_argument("--force-unlock", action="store_true", default=False,
                         help="Remove lock file without discretion",
                         dest="force_unlock")
+    parser.add_argument("--exit", action="store_true", default=False,
+                        help="perform action then exit (don't run server)",
+                        dest="exit")
+
 
     pargs = parser.parse_args(args) if args else parser.parse_args()
-
 
     if pargs.force_unlock:
         Lock().force_release()
@@ -341,6 +353,8 @@ def main(*args):
         return
 
     server = TCPServer((pargs.ip, pargs.port), Server)
+    if pargs.exit:
+        return pargs
     with Lock(timeout=5):
         try:
             server.serve_forever()
