@@ -3,7 +3,6 @@ nframe
 
 nframe is a tech demo of a Server-Client network framework.
 [![Build Status](https://travis-ci.org/cdgriffith/nframe.png?branch=master)](https://travis-ci.org/cdgriffith/nframe)
-[![Coverage Status](https://coveralls.io/repos/cdgriffith/nframe/badge.png?branch=master)](https://coveralls.io/r/cdgriffith/nframe?branch=master)
 
 **Basis:**
 

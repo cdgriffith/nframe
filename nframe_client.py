@@ -4,7 +4,7 @@
 Copyright (c) 2014 Chris Griffith - MIT License
 """
 
-__version__ = '0.8-alpha'
+__version__ = '0.1'
 
 import socket
 from json import dumps, loads
@@ -68,7 +68,8 @@ class Client():
 
     def message(self, data):
         """
-        A example function that shows how to send data to the server and receive data back.
+        A example function that shows how to send data to the server
+        and receive data back.
         """
         return self._communicate("add data", data)
 
@@ -77,4 +78,4 @@ class Client():
 
 
 if __name__ == '__main__':
-    print("\nYou can't run me!\n\n\ Read the README file")
+    print("\nYou can't run me!\n\n\ Read the README file.")

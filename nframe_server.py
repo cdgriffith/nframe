@@ -3,7 +3,8 @@
 """
 Copyright (c) 2014 Chris Griffith - MIT License
 """
-__version__ = '0.8-alpha'
+
+__version__ = '0.1'
 
 from time import sleep
 import json
@@ -53,7 +54,7 @@ class Lock(object):
 
     def __enter__(self):
         """
-        Start the lock as a context manager, protecting a file from modification.
+        Start the lock as a context manager, protecting a file from modification
         """
         self.acquire()
         if self.cleanup:
